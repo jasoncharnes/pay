@@ -26,6 +26,7 @@ module Pay
       # Returns Pay::Charge
       def create_stripe_charge(amount, options = {})
         customer = stripe_customer
+        idempotency_key = options.delete(:idempotency_key) || SecureRandom.uuid
         args = {
           amount: amount,
           confirm: true,
@@ -34,6 +35,11 @@ module Pay
           customer: customer.id,
           payment_method: customer.invoice_settings.default_payment_method
         }.merge(options)
+
+        # Add idempotency key as a second hash
+        args = [args, {
+          idempotency_key: idempotency_key
+        }]
 
         payment_intent = ::Stripe::PaymentIntent.create(args)
         Pay::Payment.new(payment_intent).validate
@@ -49,6 +55,7 @@ module Pay
       # Returns Pay::Subscription
       def create_stripe_subscription(name, plan, options = {})
         quantity = options.delete(:quantity) || 1
+        idempotency_key = options.delete(:idempotency_key) || SecureRandom.uuid
         opts = {
           expand: ["pending_setup_intent", "latest_invoice.payment_intent"],
           items: [plan: plan, quantity: quantity],
@@ -57,6 +64,11 @@ module Pay
 
         # Inherit trial from plan unless trial override was specified
         opts[:trial_from_plan] = true unless opts[:trial_period_days]
+
+        # Add idempotency key as a second hash
+        opts = [opts, {
+          idempotency_key: idempotency_key
+        }]
 
         stripe_sub = customer.subscriptions.create(opts)
         subscription = create_subscription(stripe_sub, "stripe", name, plan, status: stripe_sub.status, quantity: quantity)
