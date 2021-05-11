@@ -28,6 +28,35 @@ class Pay::Stripe::Billable::Test < ActiveSupport::TestCase
     assert_equal 2900, charge.amount
   end
 
+  test "can repeat charges with the same idempotency key without repeating charges" do
+    idempotency_key = SecureRandom.uuid
+    @billable.card_token = payment_method.id
+
+    charge = @billable.charge(2900, idempotency_key: idempotency_key)
+    assert_equal Pay::Charge, charge.class
+    assert_equal 2900, charge.amount
+    assert_equal 1, @billable.charges.length
+
+    charge = @billable.charge(2900, idempotency_key: idempotency_key)
+    assert_equal Pay::Charge, charge.class
+    assert_equal 2900, charge.amount
+    assert_equal 1, @billable.charges.length
+  end
+
+  test "can repeat charges without the same idempotency key with charges repeated" do
+    @billable.card_token = payment_method.id
+
+    charge = @billable.charge(2900)
+    assert_equal Pay::Charge, charge.class
+    assert_equal 2900, charge.amount
+    assert_equal 1, @billable.charges.length
+
+    charge = @billable.charge(2900)
+    assert_equal Pay::Charge, charge.class
+    assert_equal 2900, charge.amount
+    assert_equal 2, @billable.charges.length
+  end
+
   test "handles stripe card declined" do
     @billable.card_token = "pm_card_chargeDeclined"
     assert_raises(Pay::Stripe::Error) { @billable.charge(2900) }
@@ -57,6 +86,27 @@ class Pay::Stripe::Billable::Test < ActiveSupport::TestCase
     assert @billable.subscribed?
     assert_equal "default", @billable.subscription.name
     assert_equal "small-annual", @billable.subscription.processor_plan
+  end
+
+  test "can repeat a subscription with the same idempotency key without creating a duplicate subscription" do
+    idempotency_key = SecureRandom.uuid
+    @billable.card_token = payment_method.id
+    @billable.subscribe(name: "default", plan: "small-monthly", idempotency_key: idempotency_key)
+
+    assert @billable.subscribed?
+    assert_equal 1, @billable.subscriptions.length
+    assert_equal "default", @billable.subscription.name
+    assert_equal "small-monthly", @billable.subscription.processor_plan
+    assert @billable.subscription.processor_id.present?
+    first_subscription_id = @billable.subscription.processor_id
+
+    @billable.subscribe(name: "default", plan: "small-monthly", idempotency_key: idempotency_key)
+    assert @billable.subscribed?
+    assert_equal 1, @billable.subscriptions.length
+    assert_equal "default", @billable.subscription.name
+    assert_equal "small-monthly", @billable.subscription.processor_plan
+    assert @billable.subscription.processor_id.present?
+    assert_equal first_subscription_id, @billable.subscription.processor_id
   end
 
   test "fails when subscribing with no payment method" do

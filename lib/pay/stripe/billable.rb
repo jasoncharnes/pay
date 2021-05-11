@@ -51,6 +51,7 @@ module Pay
       # Returns Pay::Charge
       def charge(amount, options = {})
         stripe_customer = customer
+        idempotency_key = options.delete(:idempotency_key) || SecureRandom.uuid
         args = {
           amount: amount,
           confirm: true,
@@ -60,7 +61,7 @@ module Pay
           payment_method: stripe_customer.invoice_settings.default_payment_method
         }.merge(options)
 
-        payment_intent = ::Stripe::PaymentIntent.create(args)
+        payment_intent = ::Stripe::PaymentIntent.create(args, {idempotency_key: idempotency_key})
         Pay::Payment.new(payment_intent).validate
 
         # Create a new charge object
@@ -74,6 +75,7 @@ module Pay
       # Returns Pay::Subscription
       def subscribe(name: Pay.default_product_name, plan: Pay.default_plan_name, **options)
         quantity = options.delete(:quantity) || 1
+        idempotency_key = options.delete(:idempotency_key) || SecureRandom.uuid
         opts = {
           expand: ["pending_setup_intent", "latest_invoice.payment_intent"],
           items: [plan: plan, quantity: quantity],
@@ -86,7 +88,11 @@ module Pay
         # Load the Stripe customer to verify it exists and update card if needed
         opts[:customer] = customer.id
 
-        stripe_sub = ::Stripe::Subscription.create(opts)
+        stripe_sub = ::Stripe::Subscription.create(opts, {idempotency_key: idempotency_key})
+        existing_subscription = Pay.subscription_model.find_by(processor: :stripe, processor_id: stripe_sub.id)
+        # if this subscription already exists, return it instead of creating it
+        return existing_subscription unless existing_subscription.nil?
+
         subscription = billable.create_pay_subscription(stripe_sub, "stripe", name, plan, status: stripe_sub.status, quantity: quantity)
 
         # No trial, card requires SCA
