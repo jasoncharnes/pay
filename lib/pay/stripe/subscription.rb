@@ -29,7 +29,7 @@ module Pay
 
         attributes = {
           application_fee_percent: object.application_fee_percent,
-          processor_plan: object.plan.id,
+          processor_plan: object.plan&.id,
           quantity: object.quantity,
           name: name,
           status: object.status,
@@ -45,8 +45,41 @@ module Pay
 
         # Update or create the subscription
         pay_subscription = owner.subscriptions.find_or_initialize_by(processor: :stripe, processor_id: object.id)
+
         pay_subscription.update(attributes)
+
+        # Sync new items_data with existing subscription_item records
+        # (subscription record must exist)
+        if pay_subscription.persisted?
+          si_attributes = sync_subscription_items_attributes(pay_subscription, object.items.data)
+          pay_subscription.update(
+            subscription_items_attributes: si_attributes
+          )
+        end
+
         pay_subscription
+      end
+
+      def self.sync_subscription_items_attributes(subscription, items_data)
+        return subscription_items_attributes(items_data) if subscription.subscription_items.empty?
+
+        # Destroy all existing subscription items
+        items_to_destroy = subscription.subscription_items.map do |subscription_item|
+          {id: subscription_item.id, _destroy: true}
+        end
+
+        # Rebuild subscription item records based on new items data
+        subscription_items_attributes(items_data) + items_to_destroy
+      end
+
+      def self.subscription_items_attributes(items_data)
+        items_data.map do |subscription_item|
+          {
+            processor_id: subscription_item.id,
+            processor_price: subscription_item.price.id,
+            quantity: subscription_item.quantity
+          }
+        end
       end
 
       def initialize(pay_subscription)
@@ -72,7 +105,11 @@ module Pay
       end
 
       def change_quantity(quantity)
-        ::Stripe::Subscription.update(processor_id, quantity: quantity)
+        ::Stripe::Subscription.update(
+          processor_id,
+          {quantity: quantity},
+          {stripe_account: stripe_account}
+        )
       rescue ::Stripe::StripeError => e
         raise Pay::Stripe::Error, e
       end

@@ -3,7 +3,8 @@ module Pay
     module Webhooks
       class SubscriptionUpdated
         def call(event)
-          Pay::Stripe::Subscription.sync(event.data.object.id)
+          object = event.data.object
+          Pay::Stripe::Subscription.sync(object.id, object: object)
         end
       end
     end

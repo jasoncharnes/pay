@@ -76,5 +76,4 @@ ActiveRecord::Schema.define(version: 2020_11_16_191926) do
     t.string "card_exp_year"
     t.text "extra_billing_info"
   end
-
 end

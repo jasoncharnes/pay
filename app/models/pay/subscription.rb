@@ -10,14 +10,20 @@ module Pay
     # Associations
     belongs_to :owner, polymorphic: true
     has_many :charges, class_name: "Pay::Charge", foreign_key: :pay_subscription_id
+    has_many :subscription_items, class_name: "Pay::SubscriptionItem", foreign_key: :pay_subscription_id
 
     # Validations
     validates :name, presence: true
     validates :processor, presence: true
     validates :processor_id, presence: true
-    validates :processor_plan, presence: true
-    validates :quantity, presence: true
+    validates :quantity, numericality: {
+      only_integer: true,
+      allow_nil: true,
+      greater_than_or_equal_to: 1
+    }
     validates :status, presence: true
+
+    accepts_nested_attributes_for :subscription_items, allow_destroy: true
 
     # Scopes
     scope :for_name, ->(name) { where(name: name) }

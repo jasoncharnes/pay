@@ -10,18 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_06_215506) do
+ActiveRecord::Schema.define(version: 2021_06_28_193552) do
 
   create_table "accounts", force: :cascade do |t|
     t.string "email"
     t.string "merchant_processor"
-    if t.respond_to? :jsonb
-      t.jsonb "pay_data"
-    else
-      t.json "pay_data"
-    end
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.json "pay_data"
   end
 
   create_table "pay_charges", force: :cascade do |t|
@@ -37,10 +31,20 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "card_exp_year"
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.text "data"
+    t.json "data"
     t.string "currency"
     t.integer "application_fee_amount"
     t.integer "pay_subscription_id"
+  end
+
+  create_table "pay_subscription_items", force: :cascade do |t|
+    t.integer "pay_subscription_id"
+    t.string "processor_id", null: false
+    t.string "processor_price", null: false
+    t.integer "quantity", default: 1, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["pay_subscription_id"], name: "index_pay_subscription_items_on_pay_subscription_id"
   end
 
   create_table "pay_subscriptions", force: :cascade do |t|
@@ -49,14 +53,14 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "name", null: false
     t.string "processor", null: false
     t.string "processor_id", null: false
-    t.string "processor_plan", null: false
-    t.integer "quantity", default: 1, null: false
+    t.string "processor_plan"
+    t.integer "quantity", default: 1
     t.datetime "trial_ends_at"
     t.datetime "ends_at"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string "status"
-    t.text "data"
+    t.json "data"
     t.decimal "application_fee_percent", precision: 8, scale: 2
   end
 
@@ -74,9 +78,7 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "card_exp_year"
     t.text "extra_billing_info"
     t.json "pay_data"
-    t.datetime "created_at"
-    t.datetime "updated_at"
-    t.index ["owner_type", "owner_id"], name: "index_teams_on_owner_type_and_owner_id"
+    t.index ["owner_type", "owner_id"], name: "index_teams_on_owner"
   end
 
   create_table "users", force: :cascade do |t|
@@ -92,8 +94,6 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "card_exp_year"
     t.text "extra_billing_info"
     t.json "pay_data"
-    t.datetime "created_at"
-    t.datetime "updated_at"
   end
 
 end

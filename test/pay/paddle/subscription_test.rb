@@ -109,8 +109,9 @@ class Pay::Paddle::Subscription::Test < ActiveSupport::TestCase
       )
       subscription = @billable.subscription
       next_payment_date = Time.zone.parse(subscription.processor_subscription.next_payment[:date])
+
       subscription.pause
-      assert_equal subscription.paddle_paused_from, next_payment_date
+      assert_equal Time.zone.parse(subscription.paddle_paused_from), next_payment_date
 
       subscription.resume
       assert_nil subscription.paddle_paused_from
