@@ -16,7 +16,7 @@ module Pay
     # Validations
     validates :amount, presence: true
     validates :processor, presence: true
-    validates :processor_id, presence: true
+    validates :processor_id, presence: true, uniqueness: {scope: :processor, case_sensitive: false}
     validates :card_type, presence: true
 
     store_accessor :data, :paddle_receipt_url

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_06_215506) do
+ActiveRecord::Schema.define(version: 2021_07_14_175351) do
 
   create_table "accounts", force: :cascade do |t|
     t.string "email"
@@ -41,6 +41,7 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "currency"
     t.integer "application_fee_amount"
     t.integer "pay_subscription_id"
+    t.index ["processor", "processor_id"], name: "index_pay_charges_on_processor_and_processor_id", unique: true
   end
 
   create_table "pay_subscriptions", force: :cascade do |t|
@@ -58,6 +59,7 @@ ActiveRecord::Schema.define(version: 2021_04_06_215506) do
     t.string "status"
     t.text "data"
     t.decimal "application_fee_percent", precision: 8, scale: 2
+    t.index ["processor", "processor_id"], name: "index_pay_subscriptions_on_processor_and_processor_id", unique: true
   end
 
   create_table "teams", force: :cascade do |t|

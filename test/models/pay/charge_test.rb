@@ -5,6 +5,14 @@ class Pay::Charge::Test < ActiveSupport::TestCase
     @charge = Pay.charge_model.new
   end
 
+  test "validates charge uniqueness by processor and processor ID" do
+    user = User.create! email: "test@example.com", id: 1001
+    Pay.charge_model.create!(owner: user, amount: 1, processor: "stripe", processor_id: "1", card_type: "VISA")
+    assert_raises ActiveRecord::RecordInvalid do
+      Pay.charge_model.create!(owner: user, amount: 1, processor: "stripe", processor_id: "1", card_type: "VISA")
+    end
+  end
+
   test "belongs to a polymorphic owner" do
     @charge.owner = User.new
     assert_equal User, @charge.owner.class

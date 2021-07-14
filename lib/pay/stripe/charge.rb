@@ -29,9 +29,15 @@ module Pay
           attrs[:subscription] = Pay::Subscription.find_by(processor: :stripe, processor_id: invoice.subscription)
         end
 
-        pay_charge = owner.charges.find_or_initialize_by(processor: :stripe, processor_id: object.id)
-        pay_charge.update(attrs)
-        pay_charge
+        # Update or create the charge
+        processor_details = {processor: :stripe, processor_id: object.id}
+        if (pay_charge = owner.charges.find_by(processor_details))
+          pay_charge.with_lock do
+            pay_charge.update(attrs)
+          end
+        else
+          owner.charges.create(attrs.merge(processor_details))
+        end
       end
 
       def initialize(pay_charge)

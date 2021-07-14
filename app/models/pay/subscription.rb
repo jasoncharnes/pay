@@ -14,7 +14,7 @@ module Pay
     # Validations
     validates :name, presence: true
     validates :processor, presence: true
-    validates :processor_id, presence: true
+    validates :processor_id, presence: true, uniqueness: {scope: :processor, case_sensitive: false}
     validates :processor_plan, presence: true
     validates :quantity, presence: true
     validates :status, presence: true

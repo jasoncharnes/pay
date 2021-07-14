@@ -5,6 +5,7 @@ class AddPayBillableTo<%= table_name.camelize %> < ActiveRecord::Migration<%= mi
     change_table :<%= table_name %>, bulk: true do |t|
       t.string :processor
       t.string :processor_id
+      t.public_send(Pay::Adapter.json_column_type, :pay_data)
       t.datetime :trial_ends_at
       t.string :card_type
       t.string :card_last4

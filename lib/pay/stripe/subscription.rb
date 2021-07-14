@@ -49,9 +49,14 @@ module Pay
         end
 
         # Update or create the subscription
-        pay_subscription = owner.subscriptions.find_or_initialize_by(processor: :stripe, processor_id: object.id)
-        pay_subscription.update(attributes)
-        pay_subscription
+        processor_details = {processor: :stripe, processor_id: object.id}
+        if (pay_subscription = owner.subscriptions.find_by(processor_details))
+          pay_subscription.with_lock do
+            pay_subscription.update(attributes)
+          end
+        else
+          owner.subscriptions.create(attributes.merge(processor_details))
+        end
       end
 
       def initialize(pay_subscription)

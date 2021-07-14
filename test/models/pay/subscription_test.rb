@@ -6,6 +6,13 @@ class Pay::Subscription::Test < ActiveSupport::TestCase
     @subscription = Pay.subscription_model.new processor: "stripe", status: "active"
   end
 
+  test "validates subscription uniqueness by processor and processor ID" do
+    subscription1 = create_subscription(name: "default", processor_id: 1)
+    assert_raises ActiveRecord::RecordInvalid do
+      subscription1 = create_subscription(name: "default", processor_id: 1)
+    end
+  end
+
   test "belongs to a polymorphic owner" do
     @subscription.owner = @owner
     assert_equal User, @subscription.owner.class
@@ -238,7 +245,7 @@ class Pay::Subscription::Test < ActiveSupport::TestCase
       name: "default",
       owner: @owner,
       processor: "stripe",
-      processor_id: "1",
+      processor_id: rand(1..999_999_999),
       processor_plan: "default",
       quantity: "1",
       status: "active"
